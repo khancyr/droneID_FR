@@ -140,10 +140,10 @@ public:
             full_frame[start_from] = FRAME_OUI[i];
             start_from++;
         }
-/*        full_frame[start_from] = FRAME_VS_TYPE;
-        start_from++;*/
+        full_frame[start_from] = FRAME_VS_TYPE;
+        start_from++;
         const uint8_t payload_size = generate_drone_frame(full_frame, start_from);  // remove payload
-        full_frame[payload_marker] = payload_size + 3;  // +OUI
+        full_frame[payload_marker] = payload_size + 4;  // +OUI + VSTYPE
         return start_from + payload_size;
     }
     /**
