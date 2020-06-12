@@ -50,7 +50,7 @@ public:
         _old_longitude = _longitude;
         _latitude = lat * 1e-2;
         _longitude = lon * 1e-2;
-        _travelled_distance = distanceBetween(_latitude, _longitude, _old_latitude, _old_longitude);
+        _travelled_distance += distanceBetween(static_cast<double>(lat) * 1e-7, static_cast<double>(lon) * 1e-7, static_cast<double>(_old_latitude) * 1e-5, static_cast<double>(_old_longitude) * 1e-5);
     }
     /**
      * Setter pour les coordonnées GPS en double en centidegrees
@@ -63,7 +63,7 @@ public:
         _old_longitude = _longitude;
         _latitude = lat * 1e5;
         _longitude = lon * 1e5;
-        _travelled_distance = distanceBetween(_latitude, _longitude, _old_latitude, _old_longitude);
+        _travelled_distance += distanceBetween(lat, lon, static_cast<double>(_old_latitude) * 1e-5, static_cast<double>(_old_longitude) * 1e-5);
     }
     /**
      * Setter pour l'altitude en MSL (Mean Sea Level)/ Niveau au dessus de la mer en m
@@ -119,6 +119,7 @@ public:
      */
     void set_drone_id(const char* id_value) {
         // don't use std::copy as it isn't support on all targets like espressif32 sdk !
+        // TODO : if size(id_value) < TLV_LENGTH[ID_FR], fill with 0
         memcpy(_droneID, id_value, TLV_LENGTH[ID_FR]);
     }
 
@@ -249,7 +250,7 @@ public:
      */
     void set_last_send() {
         _last_send = std::chrono::high_resolution_clock::now();
-        _travelled_distance = 0;
+        _travelled_distance = 0.0;
     }
 
     /**
@@ -283,7 +284,7 @@ private:
     /**
      * Distance limite entre deux trames en m
      */
-    static constexpr uint8_t FRAME_DISTANCE_LIMIT = 30; // in m
+    static constexpr double FRAME_DISTANCE_LIMIT = 30.0; // in m
     /**
      * Enumeration des types de données à envoyer
      */
@@ -350,7 +351,7 @@ private:
     // for travelled distance calculation
     int32_t _old_latitude;
     int32_t _old_longitude;
-    int32_t _travelled_distance;
+    double _travelled_distance;
 
 
     static inline uint32_t get_2_complement(int32_t value) {
@@ -369,7 +370,7 @@ private:
      * @param long2
      * @return distance en m
      */
-    static int32_t distanceBetween(double lat1, double long1, double lat2, double long2)
+    static double distanceBetween(double lat1, double long1, double lat2, double long2)
     {
         // returns distance in meters between two positions, both specified
         // as signed decimal-degrees latitude and longitude. Uses great-circle
@@ -377,21 +378,21 @@ private:
         // Because Earth is no exact sphere, rounding errors may be up to 0.5%.
         // Courtesy of Maarten Lamers
         double delta = radians(long1-long2);
-        double sdlong = sin(delta);
-        double cdlong = cos(delta);
+        const double sdlong = sin(delta);
+        const double cdlong = cos(delta);
         lat1 = radians(lat1);
         lat2 = radians(lat2);
-        double slat1 = sin(lat1);
-        double clat1 = cos(lat1);
-        double slat2 = sin(lat2);
-        double clat2 = cos(lat2);
+        const double slat1 = sin(lat1);
+        const double clat1 = cos(lat1);
+        const double slat2 = sin(lat2);
+        const double clat2 = cos(lat2);
         delta = (clat1 * slat2) - (slat1 * clat2 * cdlong);
         delta = sq(delta);
         delta += sq(clat2 * sdlong);
         delta = sqrt(delta);
-        double denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
+        const double denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
         delta = atan2(delta, denom);
-        return static_cast<int32_t>(delta * 6372795);
+        return abs(delta * 6372795);
     }
 };
 
